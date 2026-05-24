@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AI Interview Conductor + Scorer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6fb;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background: #111827;
+      color: white;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 30px auto;
+      padding: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 14px;
+      padding: 22px;
+      margin-bottom: 22px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+
+    select, button {
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    pre {
+      background: #0f172a;
+      color: #e5e7eb;
+      padding: 18px;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-size: 14px;
+    }
+
+    .question {
+      border-left: 5px solid #2563eb;
+      padding: 14px;
+      background: #eff6ff;
+      margin-bottom: 14px;
+      border-radius: 8px;
+    }
+
+    .score {
+      font-size: 42px;
+      font-weight: bold;
+      color: #2563eb;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 10px;
+      background: #dbeafe;
+      color: #1e40af;
+      border-radius: 999px;
+      margin: 4px;
+      font-size: 13px;
+    }
+
+    .negative {
+      color: #dc2626;
+      font-weight: bold;
+    }
+
+    .positive {
+      color: #16a34a;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>AI Interview Conductor + Interview Scorer</h1>
+  <p>Group 4 — Adaptive Mock Interview Pipeline</p>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <h2>Select Candidate</h2>
+    <select id="candidateSelect">
+      <option value="riya">ICP-A: Riya Sharma</option>
+      <option value="arjun">ICP-B: Arjun Yadav</option>
+    </select>
+    <button onclick="runInterview()">Run Interview</button>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Candidate Profile</h2>
+      <div id="profile"></div>
+    </div>
+
+    <div class="card">
+      <h2>Final Score</h2>
+      <div id="scoreBox">Run interview to see score</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Module A — Interview Conductor</h2>
+    <div id="questions"></div>
+  </div>
+
+  <div class="card">
+    <h2>Module B Input</h2>
+    <pre id="moduleBInput">{}</pre>
+  </div>
+
+  <div class="card">
+    <h2>Module B Output — Scoring Report</h2>
+    <pre id="moduleBOutput">{}</pre>
+  </div>
+
+</div>
+
+<script>
+const candidates = {
+  riya: {
+    icp_type: "high_wage",
+    name: "Riya Sharma",
+    current_role: "Final year CS student",
+    target_role: "Software Engineer",
+    urgency_months: 6,
+    skills: ["Python basics", "HTML", "SQL"],
+    language: "en",
+    vision_profile: {
+      current_life: "Studying for placements, no internship yet",
+      main_blocker: "No real project experience",
+      vision_12mo: "Working at a product company, building real features",
+      top_motivation: "Want to prove the CS degree was worth it"
+    },
+    round_type: "screening",
+    company_tier: "startup",
+    previous_qa_pairs: []
+  },
+  arjun: {
+    icp_type: "low_wage",
+    name: "Arjun Yadav",
+    current_role: "Delivery partner",
+    target_role: "Data entry executive",
+    urgency_months: 3,
+    skills: ["Basic smartphone use", "Some Excel"],
+    language: "hi",
+    vision_profile: {
+      current_life: "Delivering 10 hours a day no fixed salary",
+      main_blocker: "No computer skills no idea where to start",
+      vision_12mo: "Office job fixed salary stability",
+      top_motivation: "Stability for my family"
+    },
+    round_type: "behavioral",
+    company_tier: "startup",
+    previous_qa_pairs: []
+  }
+};
+
+const answers = {
+  riya: [
+    "I built a student management system using Python and SQL.",
+    "Database design and duplicate records were the hardest challenge.",
+    "I would profile queries, optimize indexing, and cache frequently used data."
+  ],
+  arjun: [
+    "Main fixed salary aur stable career ke liye Data Entry Executive banna chahta hoon.",
+    "Main customer ki baat dhyaan se sununga aur shaant rehkar problem solve karunga.",
+    "Main roz Excel aur typing practice karke computer skills improve karunga."
+  ]
+};
+
+function conductor(data) {
+  const previous = data.previous_qa_pairs;
+  const lang = data.language;
+
+  if (previous.length === 0) {
+    if (lang === "en") {
+      return {
+        next_question: `${data.name}, you mentioned your main blocker is '${data.vision_profile.main_blocker}'. Tell me about a project where you used Python, HTML, or SQL.`,
+        question_type: "technical",
+        difficulty_level: 2,
+        reasoning: "Uses ICP profile and skills to start screening."
+      };
+    }
+
+    return {
+      next_question: `${data.name}, aap ${data.current_role} ke roop mein kaam karte hain. Aap ${data.target_role} role kyun chahte hain?`,
+      question_type: "behavioral",
+      difficulty_level: 1,
+      reasoning: "Uses ICP profile and motivation."
+    };
+  }
+
+  if (previous.length === 1) {
+    if (lang === "en") {
+      return {
+        next_question: "You mentioned Python/SQL. What was the hardest technical challenge and how did you solve it?",
+        question_type: "follow_up",
+        difficulty_level: 3,
+        reasoning: "Probing technical depth from previous answer."
+      };
+    }
+
+    return {
+      next_question: "Agar customer gussa ho, toh aap us situation ko kaise handle karenge?",
+      question_type: "behavioral",
+      difficulty_level: 2,
+      reasoning: "Tests communication and customer handling."
+    };
+  }
+
+  if (lang === "en") {
+    return {
+      next_question: "If your application became slow with 10,000 users, how would you debug and improve performance?",
+      question_type: "technical",
+      difficulty_level: 4,
+      reasoning: "Increasing difficulty after technical discussion."
+    };
+  }
+
+  return {
+    next_question: `Aapka sabse bada blocker '${data.vision_profile.main_blocker}' hai. Aap ise kaise overcome karenge?`,
+    question_type: "follow_up",
+    difficulty_level: 3,
+    reasoning: "Uses ICP blocker for adaptive follow-up."
+  };
+}
+
+function scorer(transcript, hiringBar, icpType) {
+  let scores, overall, weakIndex, strongIndex, weakReason, strongReason, nextAction;
+
+  if (icpType === "high_wage") {
+    scores = {
+      communication: 78,
+      technical: 82,
+      problem_solving: 80,
+      behavioral: 74,
+      delivery: 79
+    };
+    overall = 79;
+    weakIndex = 1;
+    strongIndex = 2;
+    weakReason = "The answer mentioned the challenge but did not fully explain the solution steps.";
+    strongReason = "The answer showed practical debugging thinking using profiling, indexing, and caching.";
+    nextAction = "Practice explaining one technical project using Problem, Approach, Tradeoff, Result format.";
+  } else {
+    scores = {
+      communication: 68,
+      technical: 52,
+      problem_solving: 60,
+      behavioral: 72,
+      delivery: 66
+    };
+    overall = 64;
+    weakIndex = 2;
+    strongIndex = 1;
+    weakReason = "The answer shows willingness to learn but lacks a concrete timeline or proof of computer practice.";
+    strongReason = "The answer shows calm customer handling and practical communication.";
+    nextAction = "Practice typing and Excel for 30 minutes daily, then explain one completed Excel task in interview format.";
+  }
+
+  const gap = {};
+  Object.keys(scores).forEach(key => {
+    gap[key] = scores[key] - hiringBar[key];
+  });
+
+  return {
+    overall_score: overall,
+    scores_per_axis: scores,
+    gap_vs_bar: gap,
+    weak_moment: {
+      timestamp_approx: `Q${weakIndex + 1}`,
+      quote: transcript[weakIndex].answer,
+      why_it_hurt: weakReason
+    },
+    strong_moment: {
+      quote: transcript[strongIndex].answer,
+      why_it_helped: strongReason
+    },
+    next_action: nextAction
+  };
+}
+
+function runInterview() {
+  const selected = document.getElementById("candidateSelect").value;
+  const candidate = JSON.parse(JSON.stringify(candidates[selected]));
+  const mockAnswers = answers[selected];
+
+  document.getElementById("profile").innerHTML = `
+    <p><b>Name:</b> ${candidate.name}</p>
+    <p><b>Current Role:</b> ${candidate.current_role}</p>
+    <p><b>Target Role:</b> ${candidate.target_role}</p>
+    <p><b>ICP:</b> ${candidate.icp_type}</p>
+    <p><b>Language:</b> ${candidate.language}</p>
+    <p><b>Main Blocker:</b> ${candidate.vision_profile.main_blocker}</p>
+    <p><b>Motivation:</b> ${candidate.vision_profile.top_motivation}</p>
+    ${candidate.skills.map(skill => `<span class="badge">${skill}</span>`).join("")}
+  `;
+
+  let transcript = [];
+  let questionsHTML = "";
+
+  for (let i = 0; i < 3; i++) {
+    const output = conductor(candidate);
+
+    questionsHTML += `
+      <div class="question">
+        <h3>Turn ${i + 1}</h3>
+        <p><b>Question:</b> ${output.next_question}</p>
+        <p><b>Answer:</b> ${mockAnswers[i]}</p>
+        <p><b>Type:</b> ${output.question_type}</p>
+        <p><b>Difficulty:</b> ${output.difficulty_level}/5</p>
+        <p><b>Reasoning:</b> ${output.reasoning}</p>
+      </div>
+    `;
+
+    transcript.push({
+      question: output.next_question,
+      answer: mockAnswers[i]
+    });
+
+    candidate.previous_qa_pairs.push({
+      question: output.next_question,
+      answer_transcript: mockAnswers[i]
+    });
+  }
+
+  document.getElementById("questions").innerHTML = questionsHTML;
+
+  const hiringBar = {
+    communication: 70,
+    technical: 70,
+    problem_solving: 70,
+    behavioral: 70,
+    delivery: 70
+  };
+
+  const moduleBInput = {
+    full_transcript: transcript,
+    icp_type: candidate.icp_type,
+    target_role: candidate.target_role,
+    round_type: candidate.round_type,
+    hiring_bar: hiringBar
+  };
+
+  const report = scorer(transcript, hiringBar, candidate.icp_type);
+
+  document.getElementById("moduleBInput").textContent =
+    JSON.stringify(moduleBInput, null, 2);
+
+  document.getElementById("moduleBOutput").textContent =
+    JSON.stringify(report, null, 2);
+
+  document.getElementById("scoreBox").innerHTML = `
+    <div class="score">${report.overall_score}/100</div>
+    <p><b>Communication:</b> ${report.scores_per_axis.communication}</p>
+    <p><b>Technical:</b> ${report.scores_per_axis.technical}</p>
+    <p><b>Problem Solving:</b> ${report.scores_per_axis.problem_solving}</p>
+    <p><b>Behavioral:</b> ${report.scores_per_axis.behavioral}</p>
+    <p><b>Delivery:</b> ${report.scores_per_axis.delivery}</p>
+  `;
+}
+
+runInterview();
+</script>
+
+</body>
+</html>
